@@ -118,6 +118,10 @@ const threadNotFoundError = new Error('Thread not found');
 const REQUEST_REMOTE_UPDATE_THROTTLE = 150;
 
 class EventRepository extends EventDelayedRepository<EventName> {
+  /*
+    I split the synchronization of events into threads so that updating one does not block the other.
+    Blocking the threads is needed to avoid race conditions.
+  */
   eventUpdatingThreads = new Map<EventName, TUpdatingThread>();
   requestRemoteUpdateTrhrottled: Throttler
 
@@ -183,7 +187,6 @@ class EventRepository extends EventDelayedRepository<EventName> {
 
       await this.updateEventStatsBy(eventName, currentLocalValue - previousSyncedValue)
 
-      
       this.unlockAndUpdateThread(eventName, currentLocalValue)
     } catch (error) {
       if(error.message === threadNotFoundError.message){
