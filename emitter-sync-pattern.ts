@@ -109,16 +109,16 @@ class Throttler {
   }
 }
 
-type EventThread = {
+type TUpdatingThread = {
   previousSyncedValue: number;
   isUpdating: boolean;
 };
 
-const thredNotFoundError = new Error('Thread not found');
+const threadNotFoundError = new Error('Thread not found');
 const REQUEST_REMOTE_UPDATE_THROTTLE = 150;
 
 class EventRepository extends EventDelayedRepository<EventName> {
-  eventUpdatingThrteads = new Map<EventName, EventThread>();
+  eventUpdatingThreads = new Map<EventName, TUpdatingThread>();
   requestRemoteUpdateTrhrottled: Throttler
 
   constructor() {
@@ -132,47 +132,47 @@ class EventRepository extends EventDelayedRepository<EventName> {
   }
 
   private lockThread = (eventName: EventName) => {
-    const thread = this.eventUpdatingThrteads.get(eventName)
+    const thread = this.eventUpdatingThreads.get(eventName)
 
     if(!thread) {
-      throw thredNotFoundError
+      throw threadNotFoundError
     }
 
-    this.eventUpdatingThrteads.set(eventName, {
+    this.eventUpdatingThreads.set(eventName, {
       ...thread,
       isUpdating: true
     })
   }
 
   private unlockThread = (eventName: EventName) => {
-    const thread = this.eventUpdatingThrteads.get(eventName)
+    const thread = this.eventUpdatingThreads.get(eventName)
 
     if(!thread) {
-      throw thredNotFoundError
+      throw threadNotFoundError
     }
 
-    this.eventUpdatingThrteads.set(eventName, {
+    this.eventUpdatingThreads.set(eventName, {
       ...thread,
       isUpdating: false
     })
   }
 
   private unlockAndUpdateThread = (eventName: EventName, currentSyncedValue: number) => {
-    this.eventUpdatingThrteads.set(eventName, {
+    this.eventUpdatingThreads.set(eventName, {
       previousSyncedValue: currentSyncedValue,
       isUpdating: false
     })
   }
 
   private requestRemoteUpdate = async (eventName: EventName, currentLocalValue: number) => {
-    if(!this.eventUpdatingThrteads.has(eventName)) {
-      this.eventUpdatingThrteads.set(eventName, {
+    if(!this.eventUpdatingThreads.has(eventName)) {
+      this.eventUpdatingThreads.set(eventName, {
         previousSyncedValue: 0,
         isUpdating: false
       })
     } 
     
-    const { isUpdating, previousSyncedValue } = this.eventUpdatingThrteads.get(eventName) as EventThread
+    const { isUpdating, previousSyncedValue } = this.eventUpdatingThreads.get(eventName) as TUpdatingThread
 
     if (isUpdating) {
       return;
@@ -186,7 +186,7 @@ class EventRepository extends EventDelayedRepository<EventName> {
       
       this.unlockAndUpdateThread(eventName, currentLocalValue)
     } catch (error) {
-      if(error.message === thredNotFoundError.message){
+      if(error.message === threadNotFoundError.message){
         throw error
       }
 
